@@ -17,6 +17,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -27,26 +28,28 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import com.jetpack_compose_trainning_04.retrofit.RetrofitInstance
 import com.jetpack_compose_trainning_04.ui.theme.Jetpack_Compose_trainning_04Theme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import okhttp3.internal.wait
 import retrofit2.HttpException
 import java.io.IOException
-
+var i :Int=0
+var context:Context?=null
 class MainActivity : ComponentActivity() {
       var myList:List<ModelItem> = emptyList()
-    var context:Context?=null
+
+    
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         context=this
+        i=0
 
 //           Thread.sleep(3000)
         Toast.makeText(this,"we will begin ",Toast.LENGTH_SHORT).show()
 
-         val prog =ProgressBar(context)
-        lifecycleScope.launch(Dispatchers.IO) {
+
+
+        val job = lifecycleScope.launch(Dispatchers.IO) {
 
             val response = try {
                 RetrofitInstance.api.getTodos()
@@ -60,10 +63,15 @@ class MainActivity : ComponentActivity() {
             //here means we got a response
             if(response.isSuccessful && response.body() !=null ){
                 //here means we really got smth
-                    GlobalScope.launch(Dispatchers.Main){
-                        Toast.makeText(context,"we got the data ",Toast.LENGTH_SHORT).show()
-                    }
+              //  Toast.makeText(context,"we got the data ",Toast.LENGTH_SHORT).show()
+
+                delay(1000)
                 myList=response.body()!!
+                delay(1000)
+                //Toast.makeText(context,"we set you the data ",Toast.LENGTH_SHORT).show()
+
+
+
             }else{
                 GlobalScope.launch(Dispatchers.Main){
                     Toast.makeText(context,"we got no the data ",Toast.LENGTH_SHORT).show()
@@ -75,23 +83,18 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        setContent {
-         androidx.compose.material.Surface(
-             modifier = Modifier.fillMaxSize()
-         ) {
-             val lst = remember {
-                 mutableStateOf(myList)
-            }
-             LazyColumn(
-                 modifier = Modifier.padding(10.dp)
-             ){
 
-                 items(lst.value){
-                         ModelItem-> myItem(model = ModelItem)
-                 }
-             }
-         }
-        }
+       runBlocking {
+           job.join()
+            delay(1000)
+           Toast.makeText(context,"we will set the content",Toast.LENGTH_SHORT).show()
+           setContent {
+               ShowMyColumn(myList = myList)
+
+           }
+       }
+
+
     }
 }
 
@@ -102,7 +105,8 @@ fun myItem(model:ModelItem) {
     }
    Row(
        horizontalArrangement = Arrangement.SpaceBetween,
-       modifier = Modifier.padding(10.dp)
+       modifier = Modifier
+           .padding(10.dp)
            .fillMaxWidth()
            .border(2.dp, Color.Blue)
    ) {
@@ -112,6 +116,25 @@ fun myItem(model:ModelItem) {
                checkState.value = it
            })
    }
+}
+@Composable
+fun ShowMyColumn(myList:List<ModelItem>){
+
+//        val lst = remember {
+//            mutableStateOf(myList)
+//        }
+        Toast.makeText(context,"content set successfully",Toast.LENGTH_SHORT).show()
+
+        LazyColumn(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxSize()
+        ){
+
+            items(myList){
+                    ModelItem-> myItem(model = ModelItem)
+            }
+        }
 }
 
 @Preview(showBackground = true)
